@@ -40,23 +40,59 @@ function formatDateTime(ts: number) {
 
 function parseStartTime(input: string): number | null {
   const trimmed = input.trim();
-  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})$/);
 
+  // Accept: "DD HH:mm" (e.g. "17 21:30")
+  const match = trimmed.match(/^(\d{1,2})[\sT](\d{2}):(\d{2})$/);
   if (!match) return null;
 
-  const [, year, month, day, hour, minute] = match;
+  const [, dayStr, hourStr, minuteStr] = match;
 
-  const date = new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
+  const day = Number(dayStr);
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+
+  if (
+    !Number.isFinite(day) ||
+    !Number.isFinite(hour) ||
+    !Number.isFinite(minute) ||
+    day < 1 ||
+    day > 31 ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  const now = new Date();
+
+  // Use current month/year. If it's already passed, roll into next month.
+  let date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    day,
+    hour,
+    minute,
     0,
     0,
   );
 
   if (Number.isNaN(date.getTime())) return null;
+
+  if (date.getTime() <= now.getTime()) {
+    date = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      day,
+      hour,
+      minute,
+      0,
+      0,
+    );
+
+    if (Number.isNaN(date.getTime())) return null;
+  }
 
   return date.getTime();
 }
@@ -180,7 +216,7 @@ client.on("interactionCreate", async (i) => {
       if (!startTime) {
         await i.reply({
           content:
-            "Invalid start_time format. Use **YYYY-MM-DD HH:mm** (24h), for example: **2026-03-17 21:30**",
+            "Invalid start_time format. Use **DD HH:mm** (24h), for example: **17 21:30**",
           ephemeral: true,
         });
         return;
