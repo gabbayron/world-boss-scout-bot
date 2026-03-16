@@ -50,17 +50,6 @@ export const commands = [
     ),
 
   new SlashCommandBuilder()
-    .setName("boss-dead")
-    .setDescription("Clear boss")
-    .addStringOption((o) =>
-      o
-        .setName("boss")
-        .setDescription("Boss")
-        .setRequired(true)
-        .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
-    ),
-
-  new SlashCommandBuilder()
     .setName("create-layer")
     .setDescription("Create a scout layer")
     .addStringOption((option) =>
@@ -83,8 +72,4 @@ export const commands = [
         .setRequired(true)
         .setAutocomplete(true),
     ),
-
-  new SlashCommandBuilder()
-    .setName("refresh-board")
-    .setDescription("Refresh board"),
 ].map((c) => c.toJSON());

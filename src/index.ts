@@ -392,60 +392,6 @@ client.on("interactionCreate", async (i) => {
       return;
     }
 
-    if (i.commandName === "boss-dead") {
-      if (!state.boardChannelId) {
-        await i.reply({
-          content: "Board is not set up yet.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      const boss = i.options.getString("boss", true);
-
-      state.scouts = state.scouts.filter((s) => s.boss !== boss);
-      await save(state);
-
-      const ch = await getBoardChannelFromState();
-      if (!ch) {
-        await i.reply({
-          content: "Configured board channel is invalid.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      await updateBoard(ch);
-
-      await i.reply({ content: "Boss cleared", ephemeral: true });
-      return;
-    }
-
-    if (i.commandName === "refresh-board") {
-      if (!state.boardChannelId) {
-        await i.reply({
-          content: "Board is not set up yet.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      state = await load();
-
-      const ch = await getBoardChannelFromState();
-      if (!ch) {
-        await i.reply({
-          content: "Configured board channel is invalid.",
-          ephemeral: true,
-        });
-        return;
-      }
-
-      await updateBoard(ch);
-
-      await i.reply({ content: "Board refreshed", ephemeral: true });
-      return;
-    }
   } catch (error) {
     console.error("Interaction error:", error);
 
