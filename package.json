@@ -1,0 +1,21 @@
+{
+  "name": "world-boss-scout-bot",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "deploy:commands": "tsx src/deploy-commands.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^16.4.5",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/pg": "^8.18.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3"
+  }
+}

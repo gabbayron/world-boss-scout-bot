@@ -1,0 +1,27 @@
+{
+  "scouts": [
+    {
+      "userId": "323126728887369728",
+      "username": "baktus_ron",
+      "boss": "Kazzak",
+      "layer": "12345",
+      "timestamp": 1773654068200
+    },
+    {
+      "userId": "323126728887369728",
+      "username": "baktus_ron",
+      "boss": "Doomwalker",
+      "layer": "1234",
+      "timestamp": 1773654079430
+    },
+    {
+      "userId": "261547198603460609",
+      "username": "tmizzle",
+      "boss": "Kazzak",
+      "layer": "123",
+      "timestamp": 1773654459083
+    }
+  ],
+  "boardChannelId": "1306740983148318751",
+  "boardMessageId": "1483027588443275427"
+}
