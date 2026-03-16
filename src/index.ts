@@ -19,16 +19,6 @@ const client = new Client({
 
 let state: State;
 
-async function registerCommands() {
-  const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
-    body: commands,
-  });
-
-  console.log("Commands registered automatically");
-}
-
 function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString("en-GB", {
     year: "numeric",
@@ -73,6 +63,16 @@ function getAvailableLayers() {
     .sort((a, b) => a.startTime - b.startTime);
 }
 
+async function registerCommands() {
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
+    body: commands,
+  });
+
+  console.log("Commands registered automatically");
+}
+
 async function updateBoard(channel: TextChannel) {
   if (!state.boardMessageId) return;
 
@@ -97,9 +97,13 @@ async function handleLayerAutocomplete(i: AutocompleteInteraction) {
   state = await load();
 
   const focused = i.options.getFocused().toLowerCase();
-  const availableLayers = getAvailableLayers();
 
-  const filtered = availableLayers
+  const layers =
+    i.commandName === "remove-layer"
+      ? [...state.layers].sort((a, b) => a.startTime - b.startTime)
+      : getAvailableLayers();
+
+  const filtered = layers
     .filter((layer) => layer.id.toLowerCase().includes(focused))
     .slice(0, 25)
     .map((layer) => ({
@@ -149,7 +153,7 @@ client.on("interactionCreate", async (i) => {
 
     if (i.commandName === "create-layer") {
       const layerId = i.options.getString("layer_id", true).trim();
-      const startTimeInput = i.options.getString("start_time");
+      const startTimeInput = i.options.getString("start_time", true);
 
       const existing = state.layers.find(
         (layer) => layer.id.toLowerCase() === layerId.toLowerCase(),
@@ -163,23 +167,15 @@ client.on("interactionCreate", async (i) => {
         return;
       }
 
-      let startTime: number;
+      const startTime = parseStartTime(startTimeInput);
 
-      if (startTimeInput) {
-        const parsed = parseStartTime(startTimeInput);
-
-        if (!parsed) {
-          await i.reply({
-            content:
-              "Invalid start_time format. Use **YYYY-MM-DD HH:mm** (24h), for example: **2026-03-17 21:30**",
-            ephemeral: true,
-          });
-          return;
-        }
-
-        startTime = parsed;
-      } else {
-        startTime = Date.now() + 24 * 60 * 60 * 1000;
+      if (!startTime) {
+        await i.reply({
+          content:
+            "Invalid start_time format. Use **YYYY-MM-DD HH:mm** (24h), for example: **2026-03-17 21:30**",
+          ephemeral: true,
+        });
+        return;
       }
 
       const endTime = startTime + 24 * 60 * 60 * 1000;
@@ -409,6 +405,7 @@ client.on("interactionCreate", async (i) => {
     }
   }
 });
+
 async function main() {
   state = await load();
 

@@ -69,8 +69,8 @@ export const commands = [
     .addStringOption((option) =>
       option
         .setName("start_time")
-        .setDescription("Optional. Format: YYYY-MM-DD HH:mm (24h)")
-        .setRequired(false),
+        .setDescription("Required format: YYYY-MM-DD HH:mm (24h)")
+        .setRequired(true),
     ),
 
   new SlashCommandBuilder()

@@ -26,8 +26,8 @@ function normalizeState(raw: Partial<State> | null | undefined): State {
   return {
     boardChannelId: raw?.boardChannelId,
     boardMessageId: raw?.boardMessageId,
-    scouts: Array.isArray(raw?.scouts) ? raw!.scouts! : [],
-    layers: Array.isArray(raw?.layers) ? raw!.layers! : [],
+    scouts: Array.isArray(raw?.scouts) ? raw.scouts : [],
+    layers: Array.isArray(raw?.layers) ? raw.layers : [],
   };
 }
 
