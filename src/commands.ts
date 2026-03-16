@@ -72,4 +72,22 @@ export const commands = [
         .setRequired(true)
         .setAutocomplete(true),
     ),
+
+  new SlashCommandBuilder()
+    .setName("boss-dead")
+    .setDescription("Mark a boss as dead on a layer")
+    .addStringOption((o) =>
+      o
+        .setName("boss")
+        .setDescription("Boss")
+        .setRequired(true)
+        .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("layer")
+        .setDescription("Choose a layer")
+        .setRequired(true)
+        .setAutocomplete(true),
+    ),
 ].map((c) => c.toJSON());

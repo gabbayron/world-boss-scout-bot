@@ -6,6 +6,12 @@ export type Scout = {
   timestamp: number;
 };
 
+export type BossKill = {
+  boss: string;
+  layer: string;
+  killedAt: number;
+};
+
 export type Layer = {
   id: string;
   startTime: number;
@@ -18,4 +24,5 @@ export type State = {
   boardMessageId?: string;
   scouts: Scout[];
   layers: Layer[];
+  bossKills: BossKill[];
 };

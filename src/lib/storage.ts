@@ -19,6 +19,7 @@ function getDefaultState(): State {
   return {
     scouts: [],
     layers: [],
+    bossKills: [],
   };
 }
 
@@ -28,6 +29,7 @@ function normalizeState(raw: Partial<State> | null | undefined): State {
     boardMessageId: raw?.boardMessageId,
     scouts: Array.isArray(raw?.scouts) ? raw.scouts : [],
     layers: Array.isArray(raw?.layers) ? raw.layers : [],
+    bossKills: Array.isArray(raw?.bossKills) ? raw.bossKills : [],
   };
 }
 

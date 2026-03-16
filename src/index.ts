@@ -72,15 +72,7 @@ function parseStartTime(input: string): number | null {
   const now = new Date();
 
   // Use current year. If it's already passed, roll into next year.
-  let date = new Date(
-    now.getFullYear(),
-    month - 1,
-    day,
-    hour,
-    minute,
-    0,
-    0,
-  );
+  let date = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
 
   if (Number.isNaN(date.getTime())) return null;
 
@@ -88,15 +80,7 @@ function parseStartTime(input: string): number | null {
   if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
 
   if (date.getTime() <= now.getTime()) {
-    date = new Date(
-      now.getFullYear() + 1,
-      month - 1,
-      day,
-      hour,
-      minute,
-      0,
-      0,
-    );
+    date = new Date(now.getFullYear() + 1, month - 1, day, hour, minute, 0, 0);
 
     if (Number.isNaN(date.getTime())) return null;
     if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
@@ -172,7 +156,8 @@ client.on("interactionCreate", async (i) => {
       if (
         i.commandName === "scout" ||
         i.commandName === "scout-remove" ||
-        i.commandName === "remove-layer"
+        i.commandName === "remove-layer" ||
+        i.commandName === "boss-dead"
       ) {
         await handleLayerAutocomplete(i);
       }
@@ -250,6 +235,11 @@ client.on("interactionCreate", async (i) => {
           `End: **${formatDateTime(endTime)}**`,
         ephemeral: true,
       });
+
+      const boardChannel = await getBoardChannelFromState();
+      if (boardChannel) {
+        await updateBoard(boardChannel);
+      }
       return;
     }
 
@@ -277,6 +267,57 @@ client.on("interactionCreate", async (i) => {
 
       await i.reply({
         content: `Removed layer **${layerId}** and cleared scouts on it.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (i.commandName === "boss-dead") {
+      if (!state.boardChannelId) {
+        await i.reply({
+          content: "Board is not set up yet. Run /setup-board first.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const boss = i.options.getString("boss", true);
+      const layer = i.options.getString("layer", true);
+
+      const validLayer = state.layers.find((l) => l.id === layer);
+      if (!validLayer) {
+        await i.reply({
+          content: `Layer **${layer}** does not exist.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      state.bossKills = state.bossKills.filter(
+        (k) => !(k.boss === boss && k.layer === layer),
+      );
+
+      state.bossKills.push({
+        boss,
+        layer,
+        killedAt: Date.now(),
+      });
+
+      await save(state);
+
+      const ch = await getBoardChannelFromState();
+      if (!ch) {
+        await i.reply({
+          content: "Configured board channel is invalid.",
+          ephemeral: true,
+        });
+        return;
+      }
+
+      await updateBoard(ch);
+
+      await i.reply({
+        content: `Marked **${boss}** as dead on layer **${layer}**`,
         ephemeral: true,
       });
       return;
@@ -391,7 +432,6 @@ client.on("interactionCreate", async (i) => {
       });
       return;
     }
-
   } catch (error) {
     console.error("Interaction error:", error);
 
