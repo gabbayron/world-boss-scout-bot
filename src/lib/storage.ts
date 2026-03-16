@@ -18,6 +18,16 @@ const pool = hasDatabase
 function getDefaultState(): State {
   return {
     scouts: [],
+    layers: [],
+  };
+}
+
+function normalizeState(raw: Partial<State> | null | undefined): State {
+  return {
+    boardChannelId: raw?.boardChannelId,
+    boardMessageId: raw?.boardMessageId,
+    scouts: Array.isArray(raw?.scouts) ? raw!.scouts! : [],
+    layers: Array.isArray(raw?.layers) ? raw!.layers! : [],
   };
 }
 
@@ -43,7 +53,8 @@ async function initDatabase() {
 export async function load(): Promise<State> {
   if (!pool) {
     ensureLocalFileExists();
-    return JSON.parse(fs.readFileSync(localFile, "utf8"));
+    const raw = JSON.parse(fs.readFileSync(localFile, "utf8"));
+    return normalizeState(raw);
   }
 
   await initDatabase();
@@ -56,7 +67,7 @@ export async function load(): Promise<State> {
   );
 
   if (result.rowCount && result.rows[0]?.state_value) {
-    return result.rows[0].state_value as State;
+    return normalizeState(result.rows[0].state_value as Partial<State>);
   }
 
   const initial = getDefaultState();

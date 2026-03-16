@@ -24,7 +24,11 @@ const cmds = [
         .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
     )
     .addStringOption((o) =>
-      o.setName("layer").setDescription("Layer").setRequired(true),
+      o
+        .setName("layer")
+        .setDescription("Choose a layer")
+        .setRequired(true)
+        .setAutocomplete(true),
     ),
 
   new SlashCommandBuilder()
@@ -38,7 +42,11 @@ const cmds = [
         .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
     )
     .addStringOption((o) =>
-      o.setName("layer").setDescription("Layer").setRequired(true),
+      o
+        .setName("layer")
+        .setDescription("Choose a layer")
+        .setRequired(true)
+        .setAutocomplete(true),
     ),
 
   new SlashCommandBuilder()
@@ -50,6 +58,30 @@ const cmds = [
         .setDescription("Boss")
         .setRequired(true)
         .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
+    ),
+
+  new SlashCommandBuilder()
+    .setName("create-layer")
+    .setDescription("Create a scout layer")
+    .addStringOption((option) =>
+      option.setName("layer_id").setDescription("Layer ID").setRequired(true),
+    )
+    .addStringOption((option) =>
+      option
+        .setName("start_time")
+        .setDescription("Optional. Format: YYYY-MM-DD HH:mm (24h)")
+        .setRequired(false),
+    ),
+
+  new SlashCommandBuilder()
+    .setName("remove-layer")
+    .setDescription("Remove an existing layer")
+    .addStringOption((option) =>
+      option
+        .setName("layer_id")
+        .setDescription("Choose a layer to remove")
+        .setRequired(true)
+        .setAutocomplete(true),
     ),
 
   new SlashCommandBuilder()

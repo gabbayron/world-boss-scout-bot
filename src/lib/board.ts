@@ -1,30 +1,24 @@
+import { EmbedBuilder } from "discord.js";
+import { State } from "../types";
+import { BOSSES } from "../config";
 
-import {EmbedBuilder} from "discord.js"
-import {State} from "../types"
-import {BOSSES,STALE_MINUTES} from "../config"
+export function build(state: State) {
+  const scouts = state.scouts;
 
-export function build(state:State){
+  const blocks = BOSSES.map((b) => {
+    const list = scouts.filter((s) => s.boss === b);
 
- const now=Date.now()
+    if (!list.length) return `**${b}**\nNo scouts`;
 
- const scouts=state.scouts.filter(
-  s=>now-s.timestamp<STALE_MINUTES*60*1000
- )
+    const rows = list
+      .map((s) => `• Layer ${s.layer} — <@${s.userId}>`)
+      .join("\n");
 
- const blocks=BOSSES.map(b=>{
+    return `**${b}**\n${rows}`;
+  });
 
-  const list=scouts.filter(s=>s.boss===b)
-
-  if(!list.length)return `**${b}**\nNo scouts`
-
-  const rows=list.map(s=>`• Layer ${s.layer} — <@${s.userId}>`).join("\n")
-
-  return `**${b}**\n${rows}`
-
- })
-
- return new EmbedBuilder()
- .setTitle("World Boss Scout Board")
- .setDescription(blocks.join("\n\n"))
- .setColor(0xff9900)
+  return new EmbedBuilder()
+    .setTitle("World Boss Scout Board")
+    .setDescription(blocks.join("\n\n"))
+    .setColor(0xff9900);
 }
