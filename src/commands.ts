@@ -69,7 +69,7 @@ export const commands = [
     .addStringOption((option) =>
       option
         .setName("start_time")
-        .setDescription("Required format: DD HH:mm (24h)")
+        .setDescription("Required format: DD/MM HH:mm (24h)")
         .setRequired(true),
     ),
 

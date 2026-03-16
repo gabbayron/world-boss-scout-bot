@@ -41,22 +41,26 @@ function formatDateTime(ts: number) {
 function parseStartTime(input: string): number | null {
   const trimmed = input.trim();
 
-  // Accept: "DD HH:mm" (e.g. "17 21:30")
-  const match = trimmed.match(/^(\d{1,2})[\sT](\d{2}):(\d{2})$/);
+  // Accept: "DD/MM HH:mm" (e.g. "25/03 12:02")
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})[\sT](\d{1,2}):(\d{2})$/);
   if (!match) return null;
 
-  const [, dayStr, hourStr, minuteStr] = match;
+  const [, dayStr, monthStr, hourStr, minuteStr] = match;
 
   const day = Number(dayStr);
+  const month = Number(monthStr);
   const hour = Number(hourStr);
   const minute = Number(minuteStr);
 
   if (
     !Number.isFinite(day) ||
+    !Number.isFinite(month) ||
     !Number.isFinite(hour) ||
     !Number.isFinite(minute) ||
     day < 1 ||
     day > 31 ||
+    month < 1 ||
+    month > 12 ||
     hour < 0 ||
     hour > 23 ||
     minute < 0 ||
@@ -67,10 +71,10 @@ function parseStartTime(input: string): number | null {
 
   const now = new Date();
 
-  // Use current month/year. If it's already passed, roll into next month.
+  // Use current year. If it's already passed, roll into next year.
   let date = new Date(
     now.getFullYear(),
-    now.getMonth(),
+    month - 1,
     day,
     hour,
     minute,
@@ -80,10 +84,13 @@ function parseStartTime(input: string): number | null {
 
   if (Number.isNaN(date.getTime())) return null;
 
+  // Guard against invalid dates like 31/02
+  if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+
   if (date.getTime() <= now.getTime()) {
     date = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
+      now.getFullYear() + 1,
+      month - 1,
       day,
       hour,
       minute,
@@ -92,6 +99,7 @@ function parseStartTime(input: string): number | null {
     );
 
     if (Number.isNaN(date.getTime())) return null;
+    if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
   }
 
   return date.getTime();
@@ -216,7 +224,7 @@ client.on("interactionCreate", async (i) => {
       if (!startTime) {
         await i.reply({
           content:
-            "Invalid start_time format. Use **DD HH:mm** (24h), for example: **17 21:30**",
+            "Invalid start_time format. Use **DD/MM HH:mm** (24h), for example: **25/03 12:02**",
           ephemeral: true,
         });
         return;
