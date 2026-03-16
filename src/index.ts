@@ -4,17 +4,30 @@ import {
   TextChannel,
   ChannelType,
   AutocompleteInteraction,
+  REST,
+  Routes,
 } from "discord.js";
-import { TOKEN } from "./config";
+import { TOKEN, CLIENT_ID, GUILD_ID } from "./config";
 import { load, save } from "./lib/storage";
 import { build } from "./lib/board";
 import { Layer, State } from "./types";
+import { commands } from "./commands";
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
 let state: State;
+
+async function registerCommands() {
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+  await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
+    body: commands,
+  });
+
+  console.log("Commands registered automatically");
+}
 
 function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString("en-GB", {
@@ -396,12 +409,17 @@ client.on("interactionCreate", async (i) => {
     }
   }
 });
-
 async function main() {
   state = await load();
 
-  client.once("ready", () => {
-    console.log("Bot ready");
+  client.once("ready", async () => {
+    try {
+      console.log(`Bot ready as ${client.user?.tag ?? "unknown user"}`);
+      await registerCommands();
+      console.log("Startup finished");
+    } catch (error) {
+      console.error("Failed during startup command registration:", error);
+    }
   });
 
   await client.login(TOKEN);
