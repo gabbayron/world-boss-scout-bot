@@ -13,6 +13,14 @@ import { build } from "./lib/board";
 import { Layer, State } from "./types";
 import { commands } from "./commands";
 
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+});
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
@@ -408,6 +416,18 @@ client.on("interactionCreate", async (i) => {
 
 async function main() {
   state = await load();
+
+  client.on("error", (error) => {
+    console.error("Discord client error:", error);
+  });
+
+  client.on("shardError", (error) => {
+    console.error("Discord shard error:", error);
+  });
+
+  client.on("warn", (info) => {
+    console.warn("Discord warning:", info);
+  });
 
   client.once("ready", async () => {
     try {
