@@ -20,6 +20,17 @@ const pool = hasDatabase
 function getDefaultState() {
     return {
         scouts: [],
+        layers: [],
+        bossKills: [],
+    };
+}
+function normalizeState(raw) {
+    return {
+        boardChannelId: raw?.boardChannelId,
+        boardMessageId: raw?.boardMessageId,
+        scouts: Array.isArray(raw?.scouts) ? raw.scouts : [],
+        layers: Array.isArray(raw?.layers) ? raw.layers : [],
+        bossKills: Array.isArray(raw?.bossKills) ? raw.bossKills : [],
     };
 }
 function ensureLocalFileExists() {
@@ -42,14 +53,15 @@ async function initDatabase() {
 async function load() {
     if (!pool) {
         ensureLocalFileExists();
-        return JSON.parse(fs_1.default.readFileSync(localFile, "utf8"));
+        const raw = JSON.parse(fs_1.default.readFileSync(localFile, "utf8"));
+        return normalizeState(raw);
     }
     await initDatabase();
     const result = await pool.query(`SELECT state_value
      FROM bot_state
      WHERE state_key = $1`, ["global"]);
     if (result.rowCount && result.rows[0]?.state_value) {
-        return result.rows[0].state_value;
+        return normalizeState(result.rows[0].state_value);
     }
     const initial = getDefaultState();
     await pool.query(`INSERT INTO bot_state (state_key, state_value)

@@ -143,7 +143,7 @@ async function handleLayerAutocomplete(i: AutocompleteInteraction) {
     .filter((layer) => layer.id.toLowerCase().includes(focused))
     .slice(0, 25)
     .map((layer) => ({
-      name: `${layer.id} | ${formatDateTime(layer.startTime)} -> ${formatDateTime(layer.endTime)}`,
+      name: layer.id,
       value: layer.id,
     }));
 
@@ -339,6 +339,17 @@ client.on("interactionCreate", async (i) => {
       if (!validLayer) {
         await i.reply({
           content: `Layer **${layer}** is not available.`,
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const isDead = state.bossKills.some(
+        (k) => k.boss === boss && k.layer === layer,
+      );
+      if (isDead) {
+        await i.reply({
+          content: `**${boss}** is already marked as dead on layer **${layer}**.`,
           ephemeral: true,
         });
         return;

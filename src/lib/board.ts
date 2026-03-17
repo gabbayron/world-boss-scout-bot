@@ -2,6 +2,10 @@ import { EmbedBuilder } from "discord.js";
 import { State } from "../types";
 import { BOSSES } from "../config";
 
+function formatDiscordRelativeTime(tsMs: number) {
+  return `<t:${Math.floor(tsMs / 1000)}:R>`;
+}
+
 export function build(state: State) {
   const { scouts, layers, bossKills } = state;
 
@@ -15,6 +19,11 @@ export function build(state: State) {
   const layerBlocks = [...layers]
     .sort((a, b) => a.startTime - b.startTime)
     .map((layer) => {
+      const isClosed = layer.endTime <= Date.now();
+      const timerLine = isClosed
+        ? `Status: **CLOSED** (${formatDiscordRelativeTime(layer.endTime)})`
+        : `Closes: ${formatDiscordRelativeTime(layer.endTime)}`;
+
       const bossLines = BOSSES.map((boss) => {
         const isKilled = bossKills.some(
           (k) => k.boss === boss && k.layer === layer.id,
@@ -31,7 +40,7 @@ export function build(state: State) {
         ? layerScouts.map((s) => `• <@${s.userId}> — ${s.boss}`).join("\n")
         : "No scouts";
 
-      return `**Layer ${layer.id}**\n${bossLines}\nScouts\n${scoutsSection}`;
+      return `**Layer ${layer.id}**\n${timerLine}\n${bossLines}\nScouts\n${scoutsSection}`;
     });
 
   return new EmbedBuilder()
