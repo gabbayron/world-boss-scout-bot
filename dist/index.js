@@ -129,6 +129,18 @@ client.on("interactionCreate", async (i) => {
                 return;
             }
             const textChannel = ch;
+            // If a board already exists in the selected channel, edit it instead of creating a new one.
+            if (state.boardChannelId === textChannel.id && state.boardMessageId) {
+                try {
+                    const existingMsg = await textChannel.messages.fetch(state.boardMessageId);
+                    await existingMsg.edit({ embeds: [(0, board_1.build)(state)] });
+                    await i.reply({ content: "Board updated", ephemeral: true });
+                    return;
+                }
+                catch {
+                    // Fall through to creating a new board message.
+                }
+            }
             const msg = await textChannel.send({ embeds: [(0, board_1.build)(state)] });
             state.boardChannelId = textChannel.id;
             state.boardMessageId = msg.id;
