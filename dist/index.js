@@ -51,20 +51,13 @@ function parseStartTime(input) {
         return null;
     }
     const now = new Date();
-    // Use current year. If it's already passed, roll into next year.
-    let date = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
+    // Always use the current year (past dates are allowed and will be "closed").
+    const date = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
     if (Number.isNaN(date.getTime()))
         return null;
     // Guard against invalid dates like 31/02
     if (date.getMonth() !== month - 1 || date.getDate() !== day)
         return null;
-    if (date.getTime() <= now.getTime()) {
-        date = new Date(now.getFullYear() + 1, month - 1, day, hour, minute, 0, 0);
-        if (Number.isNaN(date.getTime()))
-            return null;
-        if (date.getMonth() !== month - 1 || date.getDate() !== day)
-            return null;
-    }
     return date.getTime();
 }
 function isLayerActive(layer) {
