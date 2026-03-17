@@ -27,8 +27,14 @@ const client = new Client({
 
 let state: State;
 
+// Bot interprets all layer times as UTC+1 (fixed offset).
+const LAYER_TZ_OFFSET_MINUTES = 60;
+const LAYER_TZ_OFFSET_MS = LAYER_TZ_OFFSET_MINUTES * 60 * 1000;
+const LAYER_TIMEZONE = "Etc/GMT-1"; // UTC+1 (fixed, no DST)
+
 function formatDateTime(ts: number) {
   return new Date(ts).toLocaleString("en-GB", {
+    timeZone: LAYER_TIMEZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -69,17 +75,23 @@ function parseStartTime(input: string): number | null {
     return null;
   }
 
-  const now = new Date();
+  // Use "today's year" in UTC+1 (fixed) to match user expectations.
+  const nowTz = new Date(Date.now() + LAYER_TZ_OFFSET_MS);
+  const yearTz = nowTz.getUTCFullYear();
 
-  // Always use the current year (past dates are allowed and will be "closed").
-  const date = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
+  // Interpret input as UTC+1 local time and convert to UTC timestamp.
+  // UTC = (UTC+1 time) - 1 hour
+  const ts = Date.UTC(yearTz, month - 1, day, hour - 1, minute, 0, 0);
 
-  if (Number.isNaN(date.getTime())) return null;
+  if (!Number.isFinite(ts)) return null;
 
-  // Guard against invalid dates like 31/02
-  if (date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  // Guard against invalid dates like 31/02 by converting back to UTC+1.
+  const backTz = new Date(ts + LAYER_TZ_OFFSET_MS);
+  if (backTz.getUTCMonth() !== month - 1 || backTz.getUTCDate() !== day) {
+    return null;
+  }
 
-  return date.getTime();
+  return ts;
 }
 
 function isLayerActive(layer: Layer) {
