@@ -27,16 +27,17 @@ function build(state) {
             : isUpcoming
                 ? `Status: **UPCOMING**\n${opens}\n${closes}`
                 : `Status: **OPEN**\n${closes}`;
+        const layerScouts = scouts.filter((s) => s.layer === layer.id);
         const bossLines = config_1.BOSSES.map((boss) => {
             const isKilled = bossKills.some((k) => k.boss === boss && k.layer === layer.id);
             const status = isKilled ? "❌" : "✅";
-            return `${boss}: ${status}`;
+            const bossScouts = layerScouts.filter((s) => s.boss === boss);
+            const scoutList = bossScouts.length
+                ? bossScouts.map((s) => `• <@${s.userId}>`).join("\n")
+                : "• (no scouts)";
+            return `**${boss}**: ${status}\n${scoutList}`;
         }).join("\n");
-        const layerScouts = scouts.filter((s) => s.layer === layer.id);
-        const scoutsSection = layerScouts.length
-            ? layerScouts.map((s) => `• <@${s.userId}> — ${s.boss}`).join("\n")
-            : "No scouts";
-        return `**Layer ${layer.id}**\n${timerLine}\n${bossLines}\nScouts\n${scoutsSection}`;
+        return `**Layer ${layer.id}**\n${timerLine}\n\n${bossLines}`;
     });
     return new discord_js_1.EmbedBuilder()
         .setTitle("World Boss Scout Board")
