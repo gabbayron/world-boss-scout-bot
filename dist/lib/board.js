@@ -17,10 +17,16 @@ function build(state) {
     const layerBlocks = [...layers]
         .sort((a, b) => a.startTime - b.startTime)
         .map((layer) => {
-        const isClosed = layer.endTime <= Date.now();
+        const now = Date.now();
+        const isClosed = layer.endTime <= now;
+        const isUpcoming = layer.startTime > now;
+        const opens = `Opens: ${formatDiscordRelativeTime(layer.startTime)}`;
+        const closes = `Closes: ${formatDiscordRelativeTime(layer.endTime)}`;
         const timerLine = isClosed
             ? `Status: **CLOSED** (${formatDiscordRelativeTime(layer.endTime)})`
-            : `Closes: ${formatDiscordRelativeTime(layer.endTime)}`;
+            : isUpcoming
+                ? `Status: **UPCOMING**\n${opens}\n${closes}`
+                : `Status: **OPEN**\n${closes}`;
         const bossLines = config_1.BOSSES.map((boss) => {
             const isKilled = bossKills.some((k) => k.boss === boss && k.layer === layer.id);
             const status = isKilled ? "❌" : "✅";
