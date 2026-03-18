@@ -37,6 +37,17 @@ const BOSS_SCOUT_CHANNELS: Record<string, string> = {
   Doomwalker: "1478812363619569835",
 };
 
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 function interactionActor(i: { user?: { tag?: string; id: string } }) {
   const tag = i.user?.tag ?? "unknown";
   const id = i.user?.id ?? "unknown";
@@ -379,7 +390,10 @@ client.on("interactionCreate", async (i) => {
           const announceChannel = await client.channels.fetch(
             BOSS_KILL_ANNOUNCE_CHANNEL_ID,
           );
-          if (announceChannel && announceChannel.type === ChannelType.GuildText) {
+          if (
+            announceChannel &&
+            announceChannel.type === ChannelType.GuildText
+          ) {
             const announceTextChannel = announceChannel as TextChannel;
             const nowTs = Date.now();
             const formattedNow = formatDateTime(nowTs);
@@ -497,6 +511,9 @@ client.on("interactionCreate", async (i) => {
         const boss = i.options.getString("boss", true);
         const layer = i.options.getString("layer", true);
 
+        const removedEntry = state.scouts.find(
+          (s) => s.userId === i.user.id && s.boss === boss && s.layer === layer,
+        );
         const before = state.scouts.length;
 
         state.scouts = state.scouts.filter(
@@ -538,8 +555,11 @@ client.on("interactionCreate", async (i) => {
             const scoutChannel = await client.channels.fetch(scoutChannelId);
             if (scoutChannel && scoutChannel.type === ChannelType.GuildText) {
               const textScoutChannel = scoutChannel as TextChannel;
+              const durationText = removedEntry
+                ? ` (total: ${formatDuration(Date.now() - removedEntry.timestamp)})`
+                : "";
               await textScoutChannel.send(
-                `<@${i.user.id}> finished scouting on layer ${layer}`,
+                `<@${i.user.id}> finished scouting on layer ${layer}${durationText}`,
               );
             }
           }

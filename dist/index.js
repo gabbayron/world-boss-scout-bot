@@ -24,6 +24,17 @@ const BOSS_SCOUT_CHANNELS = {
     Kazzak: "1478812328446267433",
     Doomwalker: "1478812363619569835",
 };
+function formatDuration(ms) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0)
+        return `${hours}h ${minutes}m`;
+    if (minutes > 0)
+        return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+}
 function interactionActor(i) {
     const tag = i.user?.tag ?? "unknown";
     const id = i.user?.id ?? "unknown";
@@ -284,7 +295,8 @@ client.on("interactionCreate", async (i) => {
                 await updateBoard(ch);
                 try {
                     const announceChannel = await client.channels.fetch(BOSS_KILL_ANNOUNCE_CHANNEL_ID);
-                    if (announceChannel && announceChannel.type === discord_js_1.ChannelType.GuildText) {
+                    if (announceChannel &&
+                        announceChannel.type === discord_js_1.ChannelType.GuildText) {
                         const announceTextChannel = announceChannel;
                         const nowTs = Date.now();
                         const formattedNow = formatDateTime(nowTs);
@@ -380,6 +392,7 @@ client.on("interactionCreate", async (i) => {
                 }
                 const boss = i.options.getString("boss", true);
                 const layer = i.options.getString("layer", true);
+                const removedEntry = state.scouts.find((s) => s.userId === i.user.id && s.boss === boss && s.layer === layer);
                 const before = state.scouts.length;
                 state.scouts = state.scouts.filter((s) => !(s.userId === i.user.id && s.boss === boss && s.layer === layer));
                 const removed = before !== state.scouts.length;
@@ -410,7 +423,10 @@ client.on("interactionCreate", async (i) => {
                         const scoutChannel = await client.channels.fetch(scoutChannelId);
                         if (scoutChannel && scoutChannel.type === discord_js_1.ChannelType.GuildText) {
                             const textScoutChannel = scoutChannel;
-                            await textScoutChannel.send(`<@${i.user.id}> finished scouting on layer ${layer}`);
+                            const durationText = removedEntry
+                                ? ` (total: ${formatDuration(Date.now() - removedEntry.timestamp)})`
+                                : "";
+                            await textScoutChannel.send(`<@${i.user.id}> finished scouting on layer ${layer}${durationText}`);
                         }
                     }
                 }
