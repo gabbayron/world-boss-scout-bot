@@ -19,6 +19,11 @@ let state;
 const LAYER_TZ_OFFSET_MINUTES = 60;
 const LAYER_TZ_OFFSET_MS = LAYER_TZ_OFFSET_MINUTES * 60 * 1000;
 const LAYER_TIMEZONE = "Etc/GMT-1"; // UTC+1 (fixed, no DST)
+const BOSS_KILL_ANNOUNCE_CHANNEL_ID = "1478812273169666281";
+const BOSS_SCOUT_CHANNELS = {
+    Kazzak: "1478812328446267433",
+    Doomwalker: "1478812363619569835",
+};
 function interactionActor(i) {
     const tag = i.user?.tag ?? "unknown";
     const id = i.user?.id ?? "unknown";
@@ -277,6 +282,18 @@ client.on("interactionCreate", async (i) => {
                     return;
                 }
                 await updateBoard(ch);
+                try {
+                    const announceChannel = await client.channels.fetch(BOSS_KILL_ANNOUNCE_CHANNEL_ID);
+                    if (announceChannel && announceChannel.type === discord_js_1.ChannelType.GuildText) {
+                        const announceTextChannel = announceChannel;
+                        const nowTs = Date.now();
+                        const formattedNow = formatDateTime(nowTs);
+                        await announceTextChannel.send(`${boss} - ${layer} - ${formattedNow}`);
+                    }
+                }
+                catch (err) {
+                    console.error("Failed to send boss kill announcement:", err);
+                }
                 await i.reply({
                     content: `Marked **${boss}** as dead on layer **${layer}**`,
                     ephemeral: true,
@@ -338,6 +355,19 @@ client.on("interactionCreate", async (i) => {
                     content: `Added: **${boss}** on layer **${layer}**`,
                     ephemeral: true,
                 });
+                try {
+                    const scoutChannelId = BOSS_SCOUT_CHANNELS[boss];
+                    if (scoutChannelId) {
+                        const scoutChannel = await client.channels.fetch(scoutChannelId);
+                        if (scoutChannel && scoutChannel.type === discord_js_1.ChannelType.GuildText) {
+                            const textScoutChannel = scoutChannel;
+                            await textScoutChannel.send(`<@${i.user.id}> started scouting on layer ${layer}`);
+                        }
+                    }
+                }
+                catch (err) {
+                    console.error("Failed to send scout start announcement:", err);
+                }
                 return;
             }
             if (i.commandName === "scout-remove") {
@@ -374,6 +404,19 @@ client.on("interactionCreate", async (i) => {
                     content: `Removed: **${boss}** on layer **${layer}**`,
                     ephemeral: true,
                 });
+                try {
+                    const scoutChannelId = BOSS_SCOUT_CHANNELS[boss];
+                    if (scoutChannelId) {
+                        const scoutChannel = await client.channels.fetch(scoutChannelId);
+                        if (scoutChannel && scoutChannel.type === discord_js_1.ChannelType.GuildText) {
+                            const textScoutChannel = scoutChannel;
+                            await textScoutChannel.send(`<@${i.user.id}> finished scouting on layer ${layer}`);
+                        }
+                    }
+                }
+                catch (err) {
+                    console.error("Failed to send scout finish announcement:", err);
+                }
                 return;
             }
         }
