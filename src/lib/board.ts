@@ -23,15 +23,13 @@ export function build(state: State) {
 
       const isClosed = layer.endTime <= now;
       const isUpcoming = layer.startTime > now;
-
-      const opens = `Opens: ${formatDiscordRelativeTime(layer.startTime)}`;
-      const closes = `Closes: ${formatDiscordRelativeTime(layer.endTime)}`;
+      const isOpen = !isClosed && !isUpcoming;
 
       const timerLine = isClosed
-        ? `Status: **CLOSED** (${formatDiscordRelativeTime(layer.endTime)})`
+        ? `Layer ${layer.id}: **closed** ${formatDiscordRelativeTime(layer.endTime)}`
         : isUpcoming
-          ? `Status: **UPCOMING**\n${opens}\n${closes}`
-          : `Status: **OPEN**\n${closes}`;
+          ? `Layer ${layer.id}: **opens** ${formatDiscordRelativeTime(layer.startTime)}`
+          : `Layer ${layer.id}: **closes** ${formatDiscordRelativeTime(layer.endTime)}`;
 
       const layerScouts = scouts.filter((s) => s.layer === layer.id);
 
@@ -43,14 +41,19 @@ export function build(state: State) {
         const status = isKilled ? "❌" : "✅";
 
         const bossScouts = layerScouts.filter((s) => s.boss === boss);
-        const scoutList = bossScouts.length
-          ? bossScouts.map((s) => `• <@${s.userId}>`).join("\n")
-          : "• (no scouts)";
+        const showScouts = isOpen && !isKilled;
+        const scoutList = showScouts
+          ? bossScouts.length
+            ? bossScouts.map((s) => `• <@${s.userId}>`).join("\n")
+            : "• (no scouts)"
+          : "";
 
-        return `**${boss}**: ${status}\n${scoutList}`;
+        return scoutList
+          ? `${status} **${boss}**\n${scoutList}`
+          : `${status} **${boss}**`;
       }).join("\n");
 
-      return `**Layer ${layer.id}**\n${timerLine}\n\n${bossLines}`;
+      return `${timerLine}\n${bossLines}`;
     });
 
   return new EmbedBuilder()

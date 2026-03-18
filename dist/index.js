@@ -245,6 +245,7 @@ client.on("interactionCreate", async (i) => {
                 layer,
                 killedAt: Date.now(),
             });
+            state.scouts = state.scouts.filter((s) => !(s.boss === boss && s.layer === layer));
             await (0, storage_1.save)(state);
             const ch = await getBoardChannelFromState();
             if (!ch) {
