@@ -50,6 +50,26 @@ export const commands = [
     ),
 
   new SlashCommandBuilder()
+    .setName("announce")
+    .setDescription("Announce a /cw invite message for a boss")
+    .addStringOption((o) =>
+      o.setName("character").setDescription("Character name").setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("invites_keyword")
+        .setDescription("Invites keyword")
+        .setRequired(true),
+    )
+    .addStringOption((o) =>
+      o
+        .setName("boss")
+        .setDescription("Boss")
+        .setRequired(true)
+        .addChoices(...BOSSES.map((b) => ({ name: b, value: b }))),
+    ),
+
+  new SlashCommandBuilder()
     .setName("create-layer")
     .setDescription("Create a scout layer")
     .addStringOption((option) =>

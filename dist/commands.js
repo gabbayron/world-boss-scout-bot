@@ -39,6 +39,19 @@ exports.commands = [
         .setRequired(true)
         .setAutocomplete(true)),
     new discord_js_1.SlashCommandBuilder()
+        .setName("announce")
+        .setDescription("Announce a /cw invite message for a boss")
+        .addStringOption((o) => o.setName("character").setDescription("Character name").setRequired(true))
+        .addStringOption((o) => o
+        .setName("invites_keyword")
+        .setDescription("Invites keyword")
+        .setRequired(true))
+        .addStringOption((o) => o
+        .setName("boss")
+        .setDescription("Boss")
+        .setRequired(true)
+        .addChoices(...config_1.BOSSES.map((b) => ({ name: b, value: b })))),
+    new discord_js_1.SlashCommandBuilder()
         .setName("create-layer")
         .setDescription("Create a scout layer")
         .addStringOption((option) => option.setName("layer_id").setDescription("Layer ID").setRequired(true))

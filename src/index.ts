@@ -32,6 +32,7 @@ const LAYER_TZ_OFFSET_MINUTES = 60;
 const LAYER_TZ_OFFSET_MS = LAYER_TZ_OFFSET_MINUTES * 60 * 1000;
 const LAYER_TIMEZONE = "Etc/GMT-1"; // UTC+1 (fixed, no DST)
 const BOSS_KILL_ANNOUNCE_CHANNEL_ID = "1478812273169666281";
+const ANNOUNCE_CHANNEL_ID = "1478812929779564738";
 const BOSS_SCOUT_CHANNELS: Record<string, string> = {
   Kazzak: "1478812328446267433",
   Doomwalker: "1478812363619569835",
@@ -412,6 +413,36 @@ client.on("interactionCreate", async (i) => {
         return;
       }
 
+    if (i.commandName === "announce") {
+      const characterName = i.options.getString("character", true);
+      const invitesKeyword = i.options.getString("invites_keyword", true);
+      const boss = i.options.getString("boss", true);
+
+      try {
+        const ch = await client.channels.fetch(ANNOUNCE_CHANNEL_ID);
+        if (ch && ch.type === ChannelType.GuildText) {
+          const textChannel = ch as TextChannel;
+          const payload = `@everyone ${boss}\n\`\`\`/cw ${characterName} ${invitesKeyword}\`\`\``;
+
+          await textChannel.send(payload);
+          await i.reply({ content: "Announcement sent.", ephemeral: true });
+        } else {
+          await i.reply({
+            content: "Announcement channel not found or not a text channel.",
+            ephemeral: true,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to send /announce message:", err);
+        await i.reply({
+          content: "Failed to send announcement.",
+          ephemeral: true,
+        });
+      }
+
+      return;
+    }
+
       if (i.commandName === "scout") {
         if (!state.boardChannelId) {
           await i.reply({
@@ -555,7 +586,10 @@ client.on("interactionCreate", async (i) => {
             const scoutChannel = await client.channels.fetch(scoutChannelId);
             if (scoutChannel && scoutChannel.type === ChannelType.GuildText) {
               const textScoutChannel = scoutChannel as TextChannel;
-              const durationText = removedEntry
+              const hasStartTimestamp =
+                typeof removedEntry?.timestamp === "number" &&
+                Number.isFinite(removedEntry.timestamp);
+              const durationText = hasStartTimestamp
                 ? ` (total: ${formatDuration(Date.now() - removedEntry.timestamp)})`
                 : "";
               await textScoutChannel.send(
