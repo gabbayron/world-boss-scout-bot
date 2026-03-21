@@ -25,4 +25,5 @@ export type State = {
   scouts: Scout[];
   layers: Layer[];
   bossKills: BossKill[];
+  layerUnscoutedSince?: Record<string, number>;
 };

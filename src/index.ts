@@ -290,6 +290,8 @@ client.on("interactionCreate", async (i) => {
           endTime,
           createdAt: Date.now(),
         });
+        state.layerUnscoutedSince ??= {};
+        state.layerUnscoutedSince[layerId] = startTime;
 
         state.layers.sort((a, b) => a.startTime - b.startTime);
 
@@ -325,6 +327,9 @@ client.on("interactionCreate", async (i) => {
         }
 
         state.scouts = state.scouts.filter((scout) => scout.layer !== layerId);
+        if (state.layerUnscoutedSince) {
+          delete state.layerUnscoutedSince[layerId];
+        }
         await save(state);
 
         const boardChannel = await getBoardChannelFromState();
@@ -370,9 +375,19 @@ client.on("interactionCreate", async (i) => {
           killedAt: Date.now(),
         });
 
+        const hadLayerScoutsBeforeBossDead = state.scouts.some(
+          (s) => s.layer === layer,
+        );
         state.scouts = state.scouts.filter(
           (s) => !(s.boss === boss && s.layer === layer),
         );
+        const hasLayerScoutsAfterBossDead = state.scouts.some(
+          (s) => s.layer === layer,
+        );
+        if (hadLayerScoutsBeforeBossDead && !hasLayerScoutsAfterBossDead) {
+          state.layerUnscoutedSince ??= {};
+          state.layerUnscoutedSince[layer] = Date.now();
+        }
 
         await save(state);
 
@@ -487,6 +502,8 @@ client.on("interactionCreate", async (i) => {
           return;
         }
 
+        const hadLayerScoutsBefore = state.scouts.some((s) => s.layer === layer);
+        const unscoutedSince = state.layerUnscoutedSince?.[layer];
         state.scouts.push({
           userId: i.user.id,
           username: i.user.username,
@@ -494,6 +511,9 @@ client.on("interactionCreate", async (i) => {
           layer,
           timestamp: Date.now(),
         });
+        if (!hadLayerScoutsBefore && state.layerUnscoutedSince) {
+          delete state.layerUnscoutedSince[layer];
+        }
 
         await save(state);
 
@@ -519,8 +539,17 @@ client.on("interactionCreate", async (i) => {
             const scoutChannel = await client.channels.fetch(scoutChannelId);
             if (scoutChannel && scoutChannel.type === ChannelType.GuildText) {
               const textScoutChannel = scoutChannel as TextChannel;
+              const hasUnscoutedData =
+                !hadLayerScoutsBefore &&
+                typeof unscoutedSince === "number" &&
+                Number.isFinite(unscoutedSince);
+              const unscoutedDurationText = hasUnscoutedData
+                ? ` (layer unscouted for ${formatDuration(
+                    Date.now() - unscoutedSince,
+                  )})`
+                : "";
               await textScoutChannel.send(
-                `<@${i.user.id}> started scouting on layer ${layer}`,
+                `<@${i.user.id}> started scouting on layer ${layer}${unscoutedDurationText}`,
               );
             }
           }
@@ -560,6 +589,14 @@ client.on("interactionCreate", async (i) => {
             ephemeral: true,
           });
           return;
+        }
+
+        const hasLayerScoutsAfterRemoval = state.scouts.some(
+          (s) => s.layer === layer,
+        );
+        if (!hasLayerScoutsAfterRemoval) {
+          state.layerUnscoutedSince ??= {};
+          state.layerUnscoutedSince[layer] = Date.now();
         }
 
         await save(state);

@@ -222,6 +222,8 @@ client.on("interactionCreate", async (i) => {
                     endTime,
                     createdAt: Date.now(),
                 });
+                state.layerUnscoutedSince ?? (state.layerUnscoutedSince = {});
+                state.layerUnscoutedSince[layerId] = startTime;
                 state.layers.sort((a, b) => a.startTime - b.startTime);
                 await (0, storage_1.save)(state);
                 await i.reply({
@@ -248,6 +250,9 @@ client.on("interactionCreate", async (i) => {
                     return;
                 }
                 state.scouts = state.scouts.filter((scout) => scout.layer !== layerId);
+                if (state.layerUnscoutedSince) {
+                    delete state.layerUnscoutedSince[layerId];
+                }
                 await (0, storage_1.save)(state);
                 const boardChannel = await getBoardChannelFromState();
                 if (boardChannel) {
@@ -283,7 +288,13 @@ client.on("interactionCreate", async (i) => {
                     layer,
                     killedAt: Date.now(),
                 });
+                const hadLayerScoutsBeforeBossDead = state.scouts.some((s) => s.layer === layer);
                 state.scouts = state.scouts.filter((s) => !(s.boss === boss && s.layer === layer));
+                const hasLayerScoutsAfterBossDead = state.scouts.some((s) => s.layer === layer);
+                if (hadLayerScoutsBeforeBossDead && !hasLayerScoutsAfterBossDead) {
+                    state.layerUnscoutedSince ?? (state.layerUnscoutedSince = {});
+                    state.layerUnscoutedSince[layer] = Date.now();
+                }
                 await (0, storage_1.save)(state);
                 const ch = await getBoardChannelFromState();
                 if (!ch) {
@@ -375,6 +386,8 @@ client.on("interactionCreate", async (i) => {
                     });
                     return;
                 }
+                const hadLayerScoutsBefore = state.scouts.some((s) => s.layer === layer);
+                const unscoutedSince = state.layerUnscoutedSince?.[layer];
                 state.scouts.push({
                     userId: i.user.id,
                     username: i.user.username,
@@ -382,6 +395,9 @@ client.on("interactionCreate", async (i) => {
                     layer,
                     timestamp: Date.now(),
                 });
+                if (!hadLayerScoutsBefore && state.layerUnscoutedSince) {
+                    delete state.layerUnscoutedSince[layer];
+                }
                 await (0, storage_1.save)(state);
                 const ch = await getBoardChannelFromState();
                 if (!ch) {
@@ -402,7 +418,13 @@ client.on("interactionCreate", async (i) => {
                         const scoutChannel = await client.channels.fetch(scoutChannelId);
                         if (scoutChannel && scoutChannel.type === discord_js_1.ChannelType.GuildText) {
                             const textScoutChannel = scoutChannel;
-                            await textScoutChannel.send(`<@${i.user.id}> started scouting on layer ${layer}`);
+                            const hasUnscoutedData = !hadLayerScoutsBefore &&
+                                typeof unscoutedSince === "number" &&
+                                Number.isFinite(unscoutedSince);
+                            const unscoutedDurationText = hasUnscoutedData
+                                ? ` (layer unscouted for ${formatDuration(Date.now() - unscoutedSince)})`
+                                : "";
+                            await textScoutChannel.send(`<@${i.user.id}> started scouting on layer ${layer}${unscoutedDurationText}`);
                         }
                     }
                 }
@@ -431,6 +453,11 @@ client.on("interactionCreate", async (i) => {
                         ephemeral: true,
                     });
                     return;
+                }
+                const hasLayerScoutsAfterRemoval = state.scouts.some((s) => s.layer === layer);
+                if (!hasLayerScoutsAfterRemoval) {
+                    state.layerUnscoutedSince ?? (state.layerUnscoutedSince = {});
+                    state.layerUnscoutedSince[layer] = Date.now();
                 }
                 await (0, storage_1.save)(state);
                 const ch = await getBoardChannelFromState();

@@ -22,6 +22,7 @@ function getDefaultState() {
         scouts: [],
         layers: [],
         bossKills: [],
+        layerUnscoutedSince: {},
     };
 }
 function normalizeState(raw) {
@@ -31,6 +32,11 @@ function normalizeState(raw) {
         scouts: Array.isArray(raw?.scouts) ? raw.scouts : [],
         layers: Array.isArray(raw?.layers) ? raw.layers : [],
         bossKills: Array.isArray(raw?.bossKills) ? raw.bossKills : [],
+        layerUnscoutedSince: raw?.layerUnscoutedSince &&
+            typeof raw.layerUnscoutedSince === "object" &&
+            !Array.isArray(raw.layerUnscoutedSince)
+            ? raw.layerUnscoutedSince
+            : {},
     };
 }
 function ensureLocalFileExists() {
