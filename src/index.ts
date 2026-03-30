@@ -10,6 +10,7 @@ import {
 import { TOKEN, CLIENT_ID, GUILD_ID } from "./config";
 import { load, save } from "./lib/storage";
 import { build } from "./lib/board";
+import { formatLayerDateTime, parseLayerStartTime } from "./lib/timezone";
 import { Layer, State } from "./types";
 import { commands } from "./commands";
 
@@ -27,10 +28,6 @@ const client = new Client({
 
 let state: State;
 
-// Bot interprets all layer times as UTC+1 (fixed offset).
-const LAYER_TZ_OFFSET_MINUTES = 60;
-const LAYER_TZ_OFFSET_MS = LAYER_TZ_OFFSET_MINUTES * 60 * 1000;
-const LAYER_TIMEZONE = "Etc/GMT-1"; // UTC+1 (fixed, no DST)
 const BOSS_KILL_ANNOUNCE_CHANNEL_ID = "1478812273169666281";
 const ANNOUNCE_CHANNEL_ID = "1478812929779564738";
 const BOSS_SCOUT_CHANNELS: Record<string, string> = {
@@ -75,65 +72,11 @@ function logCommandEnd(i: any, startedAtMs: number) {
 }
 
 function formatDateTime(ts: number) {
-  return new Date(ts).toLocaleString("en-GB", {
-    timeZone: LAYER_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return formatLayerDateTime(ts);
 }
 
 function parseStartTime(input: string): number | null {
-  const trimmed = input.trim();
-
-  // Accept: "DD/MM HH:mm" (e.g. "25/03 12:02")
-  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})[\sT](\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-
-  const [, dayStr, monthStr, hourStr, minuteStr] = match;
-
-  const day = Number(dayStr);
-  const month = Number(monthStr);
-  const hour = Number(hourStr);
-  const minute = Number(minuteStr);
-
-  if (
-    !Number.isFinite(day) ||
-    !Number.isFinite(month) ||
-    !Number.isFinite(hour) ||
-    !Number.isFinite(minute) ||
-    day < 1 ||
-    day > 31 ||
-    month < 1 ||
-    month > 12 ||
-    hour < 0 ||
-    hour > 23 ||
-    minute < 0 ||
-    minute > 59
-  ) {
-    return null;
-  }
-
-  // Use "today's year" in UTC+1 (fixed) to match user expectations.
-  const nowTz = new Date(Date.now() + LAYER_TZ_OFFSET_MS);
-  const yearTz = nowTz.getUTCFullYear();
-
-  // Interpret input as UTC+1 local time and convert to UTC timestamp.
-  // UTC = (UTC+1 time) - 1 hour
-  const ts = Date.UTC(yearTz, month - 1, day, hour - 1, minute, 0, 0);
-
-  if (!Number.isFinite(ts)) return null;
-
-  // Guard against invalid dates like 31/02 by converting back to UTC+1.
-  const backTz = new Date(ts + LAYER_TZ_OFFSET_MS);
-  if (backTz.getUTCMonth() !== month - 1 || backTz.getUTCDate() !== day) {
-    return null;
-  }
-
-  return ts;
+  return parseLayerStartTime(input);
 }
 
 function isLayerActive(layer: Layer) {
@@ -428,35 +371,35 @@ client.on("interactionCreate", async (i) => {
         return;
       }
 
-    if (i.commandName === "announce") {
-      const characterName = i.options.getString("character", true);
-      const invitesKeyword = i.options.getString("invites_keyword", true);
-      const boss = i.options.getString("boss", true);
+      if (i.commandName === "announce") {
+        const characterName = i.options.getString("character", true);
+        const invitesKeyword = i.options.getString("invites_keyword", true);
+        const boss = i.options.getString("boss", true);
 
-      try {
-        const ch = await client.channels.fetch(ANNOUNCE_CHANNEL_ID);
-        if (ch && ch.type === ChannelType.GuildText) {
-          const textChannel = ch as TextChannel;
-          const payload = `@everyone ${boss}\n\`\`\`/cw ${characterName} ${invitesKeyword}\`\`\``;
+        try {
+          const ch = await client.channels.fetch(ANNOUNCE_CHANNEL_ID);
+          if (ch && ch.type === ChannelType.GuildText) {
+            const textChannel = ch as TextChannel;
+            const payload = `@everyone ${boss}\n\`\`\`/cw ${characterName} ${invitesKeyword}\`\`\``;
 
-          await textChannel.send(payload);
-          await i.reply({ content: "Announcement sent.", ephemeral: true });
-        } else {
+            await textChannel.send(payload);
+            await i.reply({ content: "Announcement sent.", ephemeral: true });
+          } else {
+            await i.reply({
+              content: "Announcement channel not found or not a text channel.",
+              ephemeral: true,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to send /announce message:", err);
           await i.reply({
-            content: "Announcement channel not found or not a text channel.",
+            content: "Failed to send announcement.",
             ephemeral: true,
           });
         }
-      } catch (err) {
-        console.error("Failed to send /announce message:", err);
-        await i.reply({
-          content: "Failed to send announcement.",
-          ephemeral: true,
-        });
-      }
 
-      return;
-    }
+        return;
+      }
 
       if (i.commandName === "scout") {
         if (!state.boardChannelId) {
@@ -502,7 +445,9 @@ client.on("interactionCreate", async (i) => {
           return;
         }
 
-        const hadLayerScoutsBefore = state.scouts.some((s) => s.layer === layer);
+        const hadLayerScoutsBefore = state.scouts.some(
+          (s) => s.layer === layer,
+        );
         const unscoutedSince = state.layerUnscoutedSince?.[layer];
         state.scouts.push({
           userId: i.user.id,
