@@ -270,6 +270,7 @@ client.on("interactionCreate", async (i) => {
         }
 
         state.scouts = state.scouts.filter((scout) => scout.layer !== layerId);
+        state.bossKills = state.bossKills.filter((k) => k.layer !== layerId);
         if (state.layerUnscoutedSince) {
           delete state.layerUnscoutedSince[layerId];
         }
@@ -281,7 +282,7 @@ client.on("interactionCreate", async (i) => {
         }
 
         await i.reply({
-          content: `Removed layer **${layerId}** and cleared scouts on it.`,
+          content: `Removed layer **${layerId}** and cleared scouts and boss kills on it.`,
           ephemeral: true,
         });
         return;
