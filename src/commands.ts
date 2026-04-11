@@ -77,8 +77,10 @@ export const commands = [
     )
     .addStringOption((option) =>
       option
-        .setName("start_time")
-        .setDescription("Required format: DD/MM HH:mm (24h)")
+        .setName("open_duration")
+        .setDescription(
+          "How long the layer has been open: e.g. 1d2h39m, 18h30m, 39m, or 5h20 (=5h20m)",
+        )
         .setRequired(true),
     ),
 

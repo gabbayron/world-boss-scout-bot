@@ -5,6 +5,7 @@ const config_1 = require("./config");
 const storage_1 = require("./lib/storage");
 const board_1 = require("./lib/board");
 const timezone_1 = require("./lib/timezone");
+const duration_1 = require("./lib/duration");
 const commands_1 = require("./commands");
 process.on("unhandledRejection", (reason) => {
     console.error("Unhandled promise rejection:", reason);
@@ -54,9 +55,8 @@ function logCommandEnd(i, startedAtMs) {
 function formatDateTime(ts) {
     return (0, timezone_1.formatLayerDateTime)(ts);
 }
-function parseStartTime(input) {
-    return (0, timezone_1.parseLayerStartTime)(input);
-}
+const LAYER_PRE_SCOUT_MS = 12 * 60 * 60 * 1000;
+const LAYER_SCOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
 function isLayerActive(layer) {
     return layer.endTime > Date.now();
 }
@@ -150,7 +150,7 @@ client.on("interactionCreate", async (i) => {
             }
             if (i.commandName === "create-layer") {
                 const layerId = i.options.getString("layer_id", true).trim();
-                const startTimeInput = i.options.getString("start_time", true);
+                const openDurationInput = i.options.getString("open_duration", true);
                 const existing = state.layers.find((layer) => layer.id.toLowerCase() === layerId.toLowerCase());
                 if (existing) {
                     await i.reply({
@@ -159,29 +159,38 @@ client.on("interactionCreate", async (i) => {
                     });
                     return;
                 }
-                const startTime = parseStartTime(startTimeInput);
-                if (!startTime) {
+                const elapsedMs = (0, duration_1.parseLayerOpenDuration)(openDurationInput);
+                if (elapsedMs === null) {
                     await i.reply({
-                        content: "Invalid start_time format. Use **DD/MM HH:mm** (24h), for example: **25/03 12:02**",
+                        content: "Invalid **open_duration**. Use compact units like **1d2h39m**, **18h30m**, **39m**, or **5h20** for 5h 20m.",
                         ephemeral: true,
                     });
                     return;
                 }
-                const endTime = startTime + 24 * 60 * 60 * 1000;
+                const now = Date.now();
+                const layerOpenedAt = now - elapsedMs;
+                const startTime = layerOpenedAt + LAYER_PRE_SCOUT_MS;
+                const endTime = startTime + LAYER_SCOUT_WINDOW_MS;
                 state.layers.push({
                     id: layerId,
                     startTime,
                     endTime,
-                    createdAt: Date.now(),
+                    createdAt: layerOpenedAt,
                 });
                 state.layerUnscoutedSince ?? (state.layerUnscoutedSince = {});
                 state.layerUnscoutedSince[layerId] = startTime;
                 state.layers.sort((a, b) => a.startTime - b.startTime);
                 await (0, storage_1.save)(state);
+                const windowNote = startTime > now
+                    ? `\nScout window opens in **${formatDuration(startTime - now)}**.`
+                    : endTime > now
+                        ? `\nScout window has been open for **${formatDuration(now - startTime)}**.`
+                        : "";
                 await i.reply({
                     content: `Created layer **${layerId}**\n` +
-                        `Start: **${formatDateTime(startTime)}**\n` +
-                        `End: **${formatDateTime(endTime)}**`,
+                        `Open for **${formatDuration(elapsedMs)}** (in-game)\n` +
+                        `Scout window: **${formatDateTime(startTime)}** → **${formatDateTime(endTime)}**` +
+                        windowNote,
                     ephemeral: true,
                 });
                 const boardChannel = await getBoardChannelFromState();
@@ -202,6 +211,7 @@ client.on("interactionCreate", async (i) => {
                     return;
                 }
                 state.scouts = state.scouts.filter((scout) => scout.layer !== layerId);
+                state.bossKills = state.bossKills.filter((k) => k.layer !== layerId);
                 if (state.layerUnscoutedSince) {
                     delete state.layerUnscoutedSince[layerId];
                 }
@@ -211,7 +221,7 @@ client.on("interactionCreate", async (i) => {
                     await updateBoard(boardChannel);
                 }
                 await i.reply({
-                    content: `Removed layer **${layerId}** and cleared scouts on it.`,
+                    content: `Removed layer **${layerId}** and cleared scouts and boss kills on it.`,
                     ephemeral: true,
                 });
                 return;

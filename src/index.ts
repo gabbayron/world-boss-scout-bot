@@ -10,7 +10,8 @@ import {
 import { TOKEN, CLIENT_ID, GUILD_ID } from "./config";
 import { load, save } from "./lib/storage";
 import { build } from "./lib/board";
-import { formatLayerDateTime, parseLayerStartTime } from "./lib/timezone";
+import { formatLayerDateTime } from "./lib/timezone";
+import { parseLayerOpenDuration } from "./lib/duration";
 import { Layer, State } from "./types";
 import { commands } from "./commands";
 
@@ -75,9 +76,8 @@ function formatDateTime(ts: number) {
   return formatLayerDateTime(ts);
 }
 
-function parseStartTime(input: string): number | null {
-  return parseLayerStartTime(input);
-}
+const LAYER_PRE_SCOUT_MS = 12 * 60 * 60 * 1000;
+const LAYER_SCOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function isLayerActive(layer: Layer) {
   return layer.endTime > Date.now();
@@ -200,7 +200,7 @@ client.on("interactionCreate", async (i) => {
 
       if (i.commandName === "create-layer") {
         const layerId = i.options.getString("layer_id", true).trim();
-        const startTimeInput = i.options.getString("start_time", true);
+        const openDurationInput = i.options.getString("open_duration", true);
 
         const existing = state.layers.find(
           (layer) => layer.id.toLowerCase() === layerId.toLowerCase(),
@@ -214,24 +214,27 @@ client.on("interactionCreate", async (i) => {
           return;
         }
 
-        const startTime = parseStartTime(startTimeInput);
+        const elapsedMs = parseLayerOpenDuration(openDurationInput);
 
-        if (!startTime) {
+        if (elapsedMs === null) {
           await i.reply({
             content:
-              "Invalid start_time format. Use **DD/MM HH:mm** (24h), for example: **25/03 12:02**",
+              "Invalid **open_duration**. Use compact units like **1d2h39m**, **18h30m**, **39m**, or **5h20** for 5h 20m.",
             ephemeral: true,
           });
           return;
         }
 
-        const endTime = startTime + 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const layerOpenedAt = now - elapsedMs;
+        const startTime = layerOpenedAt + LAYER_PRE_SCOUT_MS;
+        const endTime = startTime + LAYER_SCOUT_WINDOW_MS;
 
         state.layers.push({
           id: layerId,
           startTime,
           endTime,
-          createdAt: Date.now(),
+          createdAt: layerOpenedAt,
         });
         state.layerUnscoutedSince ??= {};
         state.layerUnscoutedSince[layerId] = startTime;
@@ -240,11 +243,19 @@ client.on("interactionCreate", async (i) => {
 
         await save(state);
 
+        const windowNote =
+          startTime > now
+            ? `\nScout window opens in **${formatDuration(startTime - now)}**.`
+            : endTime > now
+              ? `\nScout window has been open for **${formatDuration(now - startTime)}**.`
+              : "";
+
         await i.reply({
           content:
             `Created layer **${layerId}**\n` +
-            `Start: **${formatDateTime(startTime)}**\n` +
-            `End: **${formatDateTime(endTime)}**`,
+            `Open for **${formatDuration(elapsedMs)}** (in-game)\n` +
+            `Scout window: **${formatDateTime(startTime)}** → **${formatDateTime(endTime)}**` +
+            windowNote,
           ephemeral: true,
         });
 
