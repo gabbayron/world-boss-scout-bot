@@ -119,6 +119,30 @@ async function getBoardChannelFromState(): Promise<TextChannel | null> {
   return ch as TextChannel;
 }
 
+async function announceScoutFinished(scout: {
+  userId: string;
+  boss: string;
+  layer: string;
+  timestamp: number;
+}) {
+  const scoutChannelId = BOSS_SCOUT_CHANNELS[scout.boss];
+  if (!scoutChannelId) return;
+
+  const scoutChannel = await client.channels.fetch(scoutChannelId);
+  if (!scoutChannel || scoutChannel.type !== ChannelType.GuildText) return;
+
+  const textScoutChannel = scoutChannel as TextChannel;
+  const hasStartTimestamp =
+    typeof scout.timestamp === "number" && Number.isFinite(scout.timestamp);
+  const durationText = hasStartTimestamp
+    ? ` (total: ${formatDuration(Date.now() - scout.timestamp)})`
+    : "";
+
+  await textScoutChannel.send(
+    `<@${scout.userId}> finished scouting on layer ${scout.layer}${durationText}`,
+  );
+}
+
 async function handleLayerAutocomplete(i: AutocompleteInteraction) {
   state = await load();
 
@@ -330,12 +354,9 @@ client.on("interactionCreate", async (i) => {
           killedAt: Date.now(),
         });
 
-        const hadLayerScoutsBeforeBossDead = state.scouts.some(
-          (s) => s.layer === layer,
-        );
-        state.scouts = state.scouts.filter(
-          (s) => !(s.boss === boss && s.layer === layer),
-        );
+        const removedScouts = state.scouts.filter((s) => s.layer === layer);
+        const hadLayerScoutsBeforeBossDead = removedScouts.length > 0;
+        state.scouts = state.scouts.filter((s) => s.layer !== layer);
         const hasLayerScoutsAfterBossDead = state.scouts.some(
           (s) => s.layer === layer,
         );
@@ -357,6 +378,16 @@ client.on("interactionCreate", async (i) => {
 
         await updateBoard(ch);
 
+        if (removedScouts.length > 0) {
+          for (const removedScout of removedScouts) {
+            try {
+              await announceScoutFinished(removedScout);
+            } catch (err) {
+              console.error("Failed to send scout finish announcement:", err);
+            }
+          }
+        }
+
         try {
           const announceChannel = await client.channels.fetch(
             BOSS_KILL_ANNOUNCE_CHANNEL_ID,
@@ -377,7 +408,11 @@ client.on("interactionCreate", async (i) => {
         }
 
         await i.reply({
-          content: `Marked **${boss}** as dead on layer **${layer}**`,
+          content:
+            `Marked **${boss}** as dead on layer **${layer}**` +
+            (removedScouts.length > 0
+              ? ` and removed **${removedScouts.length}** active scout entr${removedScouts.length === 1 ? "y" : "ies"}.`
+              : "."),
           ephemeral: true,
         });
         return;
@@ -575,21 +610,8 @@ client.on("interactionCreate", async (i) => {
         });
 
         try {
-          const scoutChannelId = BOSS_SCOUT_CHANNELS[boss];
-          if (scoutChannelId) {
-            const scoutChannel = await client.channels.fetch(scoutChannelId);
-            if (scoutChannel && scoutChannel.type === ChannelType.GuildText) {
-              const textScoutChannel = scoutChannel as TextChannel;
-              const hasStartTimestamp =
-                typeof removedEntry?.timestamp === "number" &&
-                Number.isFinite(removedEntry.timestamp);
-              const durationText = hasStartTimestamp
-                ? ` (total: ${formatDuration(Date.now() - removedEntry.timestamp)})`
-                : "";
-              await textScoutChannel.send(
-                `<@${i.user.id}> finished scouting on layer ${layer}${durationText}`,
-              );
-            }
+          if (removedEntry) {
+            await announceScoutFinished(removedEntry);
           }
         } catch (err) {
           console.error("Failed to send scout finish announcement:", err);
