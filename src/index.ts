@@ -112,6 +112,8 @@ async function registerCommands() {
 async function updateBoard(channel: TextChannel) {
   if (!state.boardMessageId) return;
 
+  state.layers.sort(compareLayerIdsAsc);
+
   const msg = await channel.messages.fetch(state.boardMessageId);
   const embed = build(state);
 
@@ -305,6 +307,7 @@ client.on("interactionCreate", async (i) => {
 
         const beforeLayers = state.layers.length;
         state.layers = state.layers.filter((layer) => layer.id !== layerId);
+        state.layers.sort(compareLayerIdsAsc);
 
         if (beforeLayers === state.layers.length) {
           await i.reply({
