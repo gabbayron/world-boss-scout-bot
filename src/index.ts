@@ -12,6 +12,7 @@ import { load, save } from "./lib/storage";
 import { build } from "./lib/board";
 import { formatLayerDateTime } from "./lib/timezone";
 import { parseLayerOpenDuration } from "./lib/duration";
+import { compareLayerIdsAsc } from "./lib/layers";
 import { Layer, State } from "./types";
 import { commands } from "./commands";
 
@@ -81,18 +82,6 @@ const LAYER_SCOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function isLayerActive(layer: Layer) {
   return layer.endTime > Date.now();
-}
-
-function compareLayerIdsAsc(a: Layer, b: Layer) {
-  const aNum = Number(a.id);
-  const bNum = Number(b.id);
-  const bothNumeric = Number.isFinite(aNum) && Number.isFinite(bNum);
-
-  if (bothNumeric) {
-    return aNum - bNum;
-  }
-
-  return a.id.localeCompare(b.id, undefined, { numeric: true });
 }
 
 function getAvailableLayers() {
