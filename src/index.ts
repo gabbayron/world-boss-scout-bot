@@ -83,10 +83,20 @@ function isLayerActive(layer: Layer) {
   return layer.endTime > Date.now();
 }
 
+function compareLayerIdsAsc(a: Layer, b: Layer) {
+  const aNum = Number(a.id);
+  const bNum = Number(b.id);
+  const bothNumeric = Number.isFinite(aNum) && Number.isFinite(bNum);
+
+  if (bothNumeric) {
+    return aNum - bNum;
+  }
+
+  return a.id.localeCompare(b.id, undefined, { numeric: true });
+}
+
 function getAvailableLayers() {
-  return state.layers
-    .filter(isLayerActive)
-    .sort((a, b) => a.startTime - b.startTime);
+  return state.layers.filter(isLayerActive).sort(compareLayerIdsAsc);
 }
 
 async function registerCommands() {
@@ -150,7 +160,7 @@ async function handleLayerAutocomplete(i: AutocompleteInteraction) {
 
   const layers =
     i.commandName === "remove-layer"
-      ? [...state.layers].sort((a, b) => a.startTime - b.startTime)
+      ? [...state.layers].sort(compareLayerIdsAsc)
       : getAvailableLayers();
 
   const filtered = layers
@@ -263,7 +273,7 @@ client.on("interactionCreate", async (i) => {
         state.layerUnscoutedSince ??= {};
         state.layerUnscoutedSince[layerId] = startTime;
 
-        state.layers.sort((a, b) => a.startTime - b.startTime);
+        state.layers.sort(compareLayerIdsAsc);
 
         await save(state);
 
