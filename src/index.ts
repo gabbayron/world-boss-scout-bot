@@ -356,13 +356,20 @@ client.on("interactionCreate", async (i) => {
           killedAt: Date.now(),
         });
 
-        const removedScouts = state.scouts.filter((s) => s.layer === layer);
-        const hadLayerScoutsBeforeBossDead = removedScouts.length > 0;
-        state.scouts = state.scouts.filter((s) => s.layer !== layer);
+        const removedScouts = state.scouts.filter(
+          (s) => s.boss === boss && s.layer === layer,
+        );
+
+        const hadBossLayerScoutsBeforeBossDead = removedScouts.length > 0;
+
+        state.scouts = state.scouts.filter(
+          (s) => !(s.boss === boss && s.layer === layer),
+        );
         const hasLayerScoutsAfterBossDead = state.scouts.some(
           (s) => s.layer === layer,
         );
-        if (hadLayerScoutsBeforeBossDead && !hasLayerScoutsAfterBossDead) {
+
+        if (hadBossLayerScoutsBeforeBossDead && !hasLayerScoutsAfterBossDead) {
           state.layerUnscoutedSince ??= {};
           state.layerUnscoutedSince[layer] = Date.now();
         }
